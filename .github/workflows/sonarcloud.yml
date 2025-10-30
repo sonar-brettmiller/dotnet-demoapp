@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: SonarCloud
+    name: SonarCloud Scan
     runs-on: ubuntu-latest
     
     steps:
@@ -18,38 +18,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
-      
-      - name: Setup Java (for SonarScanner)
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      
+
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-      
+
       - name: Cache .NET packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: ${{ runner.os }}-nuget-
-      
+
       - name: Install SonarScanner for .NET
         run: dotnet tool install --global dotnet-sonarscanner
-      
+
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
-      
+
       - name: Begin SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -63,10 +63,10 @@ jobs:
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
             /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**,**/Program.cs" \
             /d:sonar.exclusions="**/wwwroot/lib/**,**/bin/**,**/obj/**,**/Migrations/**"
-      
+
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --no-restore --configuration Release
-      
+
       - name: Run tests with coverage
         run: |
           dotnet test dotnet-demoapp.sln \
@@ -75,12 +75,12 @@ jobs:
             --logger trx \
             --collect:"XPlat Code Coverage" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-      
+
       - name: End SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
-      
+
       - name: Check Quality Gate
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
