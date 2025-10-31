@@ -24,21 +24,27 @@ jobs:
         with:
           dotnet-version: '6.0.x'
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Cache SonarCloud packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v3
+      - name: Cache .NET packages
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: ${{ runner.os }}-nuget-
 
-      - name: Install SonarScanner for .NET
+      - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Restore dependencies
@@ -54,9 +60,10 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**,**/*.cshtml,**/*.cshtml.cs" \
-            /d:sonar.exclusions="**/bin/**,**/obj/**,**/wwwroot/lib/**,**/*.min.js,**/*.min.css" \
-            /d:sonar.test.inclusions="**/*Test.cs,**/*Tests.cs,**/UnitTest.cs"
+            /d:sonar.javascript.lcov.reportPaths="**/lcov.info" \
+            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/lib/**" \
+            /d:sonar.exclusions="**/wwwroot/lib/**,**/obj/**,**/bin/**" \
+            /d:sonar.sourceEncoding="UTF-8"
 
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
@@ -69,18 +76,15 @@ jobs:
             --verbosity normal \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
-            --logger "junit;LogFilePath=../test-results/junit.xml" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarCloud analysis
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
-      - name: Wait for Quality Gate
-        run: sleep 10
-
-      - name: Check Quality Gate
+      - name: SonarCloud Quality Gate check
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
