@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: SonarCloud Analysis
+    name: SonarCloud
     runs-on: ubuntu-latest
     
     steps:
@@ -76,7 +76,7 @@ jobs:
             --verbosity normal \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
-            --logger "junit;LogFilePath=test-results.xml" \
+            --logger:"junit;LogFilePath=test-results.xml" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarCloud analysis
@@ -90,5 +90,3 @@ jobs:
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
