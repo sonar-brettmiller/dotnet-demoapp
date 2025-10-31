@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: SonarCloud Analysis
+    name: SonarCloud Scan
     runs-on: ubuntu-latest
     
     steps:
@@ -18,38 +18,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
-
+      
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
+      
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-
+      
       - name: Cache .NET packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: ${{ runner.os }}-nuget-
-
+      
       - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
-
+      
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
-
+      
       - name: Begin SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -64,10 +64,10 @@ jobs:
             /d:sonar.javascript.file.suffixes=".js" \
             /d:sonar.sources="src" \
             /d:sonar.tests="tests"
-
+      
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
-
+      
       - name: Run tests with coverage
         run: |
           dotnet test dotnet-demoapp.sln \
@@ -76,15 +76,14 @@ jobs:
             --verbosity normal \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
-            --logger:"junit;LogFilePath=test-results.xml" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
+      
       - name: End SonarCloud analysis
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
-
+      
       - name: SonarCloud Quality Gate check
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
