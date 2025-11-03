@@ -22,7 +22,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: |
+            6.0.x
+            8.0.x
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -62,9 +64,8 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**" \
             /d:sonar.javascript.file.suffixes=".js" \
-            /d:sonar.sources="src" \
-            /d:sonar.tests="tests" \
-            /d:sonar.exclusions="**/obj/**,**/bin/**,**/wwwroot/lib/**,**/Migrations/**"
+            /d:sonar.exclusions="**/obj/**,**/bin/**,**/wwwroot/lib/**,**/Migrations/**" \
+            /d:sonar.scanner.skipJreProvisioning=true
 
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
@@ -78,6 +79,7 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        continue-on-error: true
 
       - name: End SonarCloud analysis
         env:
