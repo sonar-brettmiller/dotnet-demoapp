@@ -23,7 +23,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
             8.0.x
 
@@ -56,6 +55,8 @@ jobs:
             echo "Removing incompatible sonar-project.properties file"
             rm sonar-project.properties
           fi
+          find . -name "sonar-project.properties" -type f -delete
+          echo "Verified all sonar-project.properties files removed"
 
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
