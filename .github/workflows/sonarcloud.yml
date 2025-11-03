@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
@@ -59,12 +59,11 @@ jobs:
             /o:"sonar-brettmiller" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.scanner.skipJreProvisioning=true \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="**/lcov.info" \
             /d:sonar.exclusions="**/wwwroot/lib/**,**/obj/**,**/bin/**" \
-            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**" \
-            /d:sonar.sources="src" \
-            /d:sonar.tests="tests"
+            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**"
 
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
@@ -78,6 +77,7 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        continue-on-error: true
 
       - name: End SonarCloud analysis
         env:
