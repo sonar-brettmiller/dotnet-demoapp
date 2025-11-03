@@ -19,10 +19,15 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Setup .NET
+      - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
+      
+      - name: Setup .NET 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
       
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -47,6 +52,12 @@ jobs:
       - name: Install dotnet-sonarscanner
         run: dotnet tool install --global dotnet-sonarscanner
       
+      - name: Update test project to .NET 8.0
+        run: |
+          # Update test project target framework from net5.0 to net8.0
+          sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net8.0<\/TargetFramework>/g' tests/tests.csproj || true
+          sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net8.0<\/TargetFramework>/g' tests/*.csproj || true
+      
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
       
@@ -63,8 +74,7 @@ jobs:
             /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**" \
             /d:sonar.exclusions="**/wwwroot/lib/**,**/bin/**,**/obj/**" \
             /d:sonar.javascript.file.suffixes=".js" \
-            /d:sonar.sources="src" \
-            /d:sonar.tests="tests"
+            /d:sonar.scanner.skipJreProvisioning=true
       
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
