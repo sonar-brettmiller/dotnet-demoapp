@@ -44,6 +44,14 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: ${{ runner.os }}-nuget-
 
+      - name: Remove incompatible sonar-project.properties
+        run: |
+          if [ -f "sonar-project.properties" ]; then
+            echo "Removing sonar-project.properties file (incompatible with SonarScanner for .NET)"
+            rm -f sonar-project.properties
+          fi
+          find . -name "sonar-project.properties" -type f -delete
+
       - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
