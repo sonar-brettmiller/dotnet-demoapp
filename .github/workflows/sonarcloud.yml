@@ -19,7 +19,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 5.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '5.0.x'
+
+      - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
@@ -60,6 +65,7 @@ jobs:
             /o:"sonar-brettmiller" \
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.scanner.skipJreProvisioning=true \
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="tests/**,**/*.cshtml,**/*.js" \
             /d:sonar.exclusions="**/wwwroot/lib/**,**/obj/**,**/bin/**" \
