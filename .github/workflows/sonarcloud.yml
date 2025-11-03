@@ -22,7 +22,9 @@ jobs:
       - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            6.0.x
+            8.0.x
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -46,6 +48,11 @@ jobs:
 
       - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Update project target framework
+        run: |
+          find . -name "*.csproj" -type f -exec sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' {} +
+          find . -name "*.csproj" -type f -exec sed -i 's/<TargetFramework>net5\.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' {} +
 
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
