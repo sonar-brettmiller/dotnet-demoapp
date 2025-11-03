@@ -44,6 +44,13 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
 
+      - name: Update test project to .NET 6.0
+        run: |
+          # Update test project TargetFramework from net5.0 to net6.0
+          sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' tests/tests.csproj || true
+          # Update main project if it also targets net5.0
+          sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' src/dotnet-demoapp.csproj || true
+
       - name: Begin SonarCloud analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
