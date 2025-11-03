@@ -63,8 +63,7 @@ jobs:
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" \
             /d:sonar.exclusions="**/wwwroot/lib/**,**/obj/**,**/bin/**" \
             /d:sonar.javascript.file.suffixes=".js" \
-            /d:sonar.sources="src" \
-            /d:sonar.tests="tests"
+            /d:sonar.scanner.skipJreProvisioning=true
 
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
@@ -76,6 +75,7 @@ jobs:
             --no-build \
             --logger "trx;LogFileName=test-results.trx" \
             --collect:"XPlat Code Coverage" \
+            --framework net6.0 \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarScanner
