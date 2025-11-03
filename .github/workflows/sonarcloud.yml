@@ -50,6 +50,16 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
 
+      - name: Retarget test project to .NET 6.0
+        run: |
+          if [ -f tests/tests.csproj ]; then
+            sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' tests/tests.csproj
+            echo "Test project retargeted to .NET 6.0"
+          else
+            echo "Test project not found at tests/tests.csproj, searching..."
+            find . -name "tests.csproj" -type f -exec sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' {} \;
+          fi
+
       - name: Begin SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -59,6 +69,7 @@ jobs:
             /o:"sonar-brettmiller" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.scanner.skipJreProvisioning=true \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="**/lcov.info" \
             /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/lib/**" \
