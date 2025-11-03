@@ -18,10 +18,15 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Setup .NET
+      - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
+      
+      - name: Setup .NET 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
       
       - name: Cache NuGet packages
         uses: actions/cache@v3
@@ -42,6 +47,15 @@ jobs:
         run: |
           dotnet tool install --global dotnet-sonarscanner
       
+      - name: Update test project target framework
+        run: |
+          if [ -f "tests/tests.csproj" ]; then
+            sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' tests/tests.csproj
+          fi
+          if [ -f "tests/tests.csproj" ]; then
+            sed -i 's/<TargetFramework>net5\.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' tests/tests.csproj
+          fi
+      
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
       
@@ -58,7 +72,8 @@ jobs:
             /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
             /d:sonar.javascript.lcov.reportPaths="**/coverage/lcov.info" \
             /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/js/**" \
-            /d:sonar.exclusions="**/bin/**,**/obj/**,**/TestResults/**"
+            /d:sonar.exclusions="**/bin/**,**/obj/**,**/TestResults/**" \
+            /d:sonar.scanner.skipJreProvisioning=true
       
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
