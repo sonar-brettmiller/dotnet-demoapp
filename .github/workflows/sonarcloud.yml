@@ -3,8 +3,7 @@ name: SonarCloud Analysis
 on:
   push:
     branches:
-      - main
-      - develop
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -19,62 +18,47 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
+      - name: Setup .NET 6.0
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
+          dotnet-version: '6.0.x'
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-paths: |
+            ~/.nuget/packages
 
       - name: Cache SonarCloud packages
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Cache SonarCloud scanner
-        uses: actions/cache@v4
-        with:
-          path: ./.sonar/scanner
-          key: ${{ runner.os }}-sonar-scanner
-          restore-keys: ${{ runner.os }}-sonar-scanner
-
       - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
-
-      - name: Remove incompatible sonar-project.properties
-        run: |
-          if [ -f sonar-project.properties ]; then
-            echo "Removing incompatible sonar-project.properties file"
-            rm sonar-project.properties
-          fi
-          find . -name "sonar-project.properties" -type f -delete
-          echo "Verified all sonar-project.properties files removed"
 
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
 
       - name: Begin SonarCloud analysis
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet sonarscanner begin \
             /k:"dotnet-demoapp" \
             /o:"sonar-brettmiller" \
-            /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**" \
+            /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
+            /d:sonar.exclusions="**/wwwroot/lib/**,**/bin/**,**/obj/**" \
             /d:sonar.javascript.file.suffixes=".js" \
-            /d:sonar.exclusions="**/obj/**,**/bin/**,**/wwwroot/lib/**,**/Migrations/**" \
-            /d:sonar.scanner.skipJreProvisioning=true
+            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**"
 
       - name: Build solution
         run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
@@ -84,22 +68,20 @@ jobs:
           dotnet test dotnet-demoapp.sln \
             --configuration Release \
             --no-build \
-            --verbosity normal \
+            --logger trx \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./coverage \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-        continue-on-error: true
 
       - name: End SonarCloud analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
-        if: always()
 
       - name: SonarCloud Quality Gate check
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        continue-on-error: true
+        with:
+          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
