@@ -10,7 +10,7 @@ on:
 
 jobs:
   sonarcloud:
-    name: SonarCloud Scan
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
     
     steps:
@@ -19,48 +19,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET 6.0
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: 6.0.x
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Cache SonarCloud packages
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
       - name: Cache .NET packages
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: ${{ runner.os }}-nuget-
 
-      - name: Install SonarScanner for .NET
+      - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Restore dependencies
         run: dotnet restore dotnet-demoapp.sln
 
-      - name: Retarget test project to .NET 6.0
-        run: |
-          if [ -f tests/tests.csproj ]; then
-            sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' tests/tests.csproj
-            echo "Test project retargeted to .NET 6.0"
-          else
-            echo "Test project not found at tests/tests.csproj, searching..."
-            find . -name "tests.csproj" -type f -exec sed -i 's/<TargetFramework>net5.0<\/TargetFramework>/<TargetFramework>net6.0<\/TargetFramework>/g' {} \;
-          fi
-
-      - name: Begin SonarScanner
+      - name: Begin SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -69,38 +59,32 @@ jobs:
             /o:"sonar-brettmiller" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
-            /d:sonar.scanner.skipJreProvisioning=true \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.cs.vstest.reportsPaths="**/TestResults/*.trx" \
             /d:sonar.javascript.lcov.reportPaths="**/lcov.info" \
-            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/lib/**" \
-            /d:sonar.exclusions="**/bin/**,**/obj/**,**/wwwroot/lib/**" \
-            /d:sonar.test.exclusions="**/tests/**" \
-            /d:sonar.testProjectPattern="**/tests.csproj"
+            /d:sonar.coverage.exclusions="**/tests/**,**/wwwroot/**" \
+            /d:sonar.exclusions="**/bin/**,**/obj/**,**/wwwroot/lib/**"
 
       - name: Build solution
-        run: dotnet build dotnet-demoapp.sln --configuration Release --no-restore
+        run: dotnet build dotnet-demoapp.sln --no-restore --configuration Release
 
       - name: Run tests with coverage
         run: |
           dotnet test dotnet-demoapp.sln \
-            --configuration Release \
             --no-build \
-            --verbosity normal \
+            --configuration Release \
+            --logger trx \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./coverage \
-            --logger:"junit;LogFilePath=./coverage/junit-results.xml" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
-      - name: End SonarScanner
+      - name: End SonarCloud analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
-      - name: SonarCloud Quality Gate Check
+      - name: SonarCloud Quality Gate check
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: .sonarqube/out/.sonar/report-task.txt
